@@ -1,4 +1,4 @@
-# Team Task Manager API - Project Guide
+# Team Task Manager API
 
 ## 1. Project Overview
 
