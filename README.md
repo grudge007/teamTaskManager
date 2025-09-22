@@ -1,5 +1,3 @@
----
-
 # Team Task Manager API - Project Guide
 
 ## 1. Project Overview
@@ -258,8 +256,6 @@ team-task-manager/
 * Keep **logging verbose in dev** and concise in production.
 * Enforce **RBAC** consistently using `roleMiddleware`.
 * Use **transactions** for critical operations involving multiple tables.
-
----
 
 
 
