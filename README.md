@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 # Team Task Manager API
+=======
+# Team Task Manager API - Project Guide
+>>>>>>> 0bcda5d (commit 2)
 
 ## 1. Project Overview
 
@@ -257,5 +261,9 @@ team-task-manager/
 * Enforce **RBAC** consistently using `roleMiddleware`.
 * Use **transactions** for critical operations involving multiple tables.
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> 0bcda5d (commit 2)
 
 
