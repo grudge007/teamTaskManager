@@ -2,6 +2,7 @@ const authService = require("../services/authServices");
 const { signupSchema, loginSchema } = require("../utils/validator");
 const logger = require("../utils/logger");
 
+// signup
 exports.userSignup = async (req, res, next) => {
   const { value, error } = signupSchema.validate(req.body);
   if (error) {
@@ -25,6 +26,7 @@ exports.userSignup = async (req, res, next) => {
   }
 };
 
+// login
 exports.userLogin = async (req, res, next) => {
   const { value, error } = loginSchema.validate(req.body);
   if (error) {
@@ -37,6 +39,39 @@ exports.userLogin = async (req, res, next) => {
       value.password
     );
     res.status(202).json(loginAttempt);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// refresh token
+exports.refreshToken = async (req, res, next) => {
+  try {
+    const { token } = req.body;
+    // or const token = req.body.token, both are same
+    const newToken = await authService.refreshToken(token);
+    res.json(newToken);
+  } catch (err) {
+    next(err);
+  }
+};
+
+// logout
+exports.logoutUser = async (req, res, next) => {
+  try {
+    const { token } = req.body;
+    await authService.logout(token);
+    res.json({ success: true, message: "Logged out" });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// delete account
+exports.deleteUser = async (req, res, next) => {
+  try {
+    const delUser = await authService.deleteUser(req.user.username);
+    res.json(delUser);
   } catch (err) {
     next(err);
   }
