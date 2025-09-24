@@ -1,18 +1,23 @@
-<<<<<<< HEAD
-# Team Task Manager API
-=======
-# Team Task Manager API - Project Guide
->>>>>>> 0bcda5d (commit 2)
+# Team Project Management API
 
 ## 1. Project Overview
 
-This is a **production-ready, API-first task management system** for teams. Features include user authentication, role-based access control, teams, projects, tasks, activity logging, and real-time notifications.
+This is a **production-ready, API-first project management system** for organizations and teams.
+Features include:
 
-Tech Stack:
+* **Organizations**: group users and manage projects inside an org.
+* **Projects**: created under an org, with project-specific memberships.
+* **Tasks**: assignable, with priority, status, due dates.
+* **Comments & Mentions**: collaborate by commenting on tasks and mentioning users (`@username`).
+* **Invitations**: invite users to organizations via email.
+* **Notifications**: real-time updates (via WebSockets/Redis pub-sub).
+* **RBAC**: role-based access at organization, project, and task levels.
+
+### Tech Stack
 
 * **Backend:** Express.js
 * **Database:** MySQL
-* **Cache & Pub/Sub:** Redis (optional)
+* **Cache & Pub/Sub:** Redis (optional, for notifications/rate limiting)
 * **Auth:** JWT
 * **Logging:** Pino
 * **Testing:** Jest + Supertest
@@ -23,42 +28,48 @@ Tech Stack:
 ## 2. Folder Structure
 
 ```
-team-task-manager/
+project-management-api/
 ├── src/
 │   ├── config/
-│   │   ├── db.js                # MySQL connection
-│   │   └── redis.js             # Redis connection (optional)
+│   │   ├── db.js
+│   │   └── redis.js
 │   │
-│   ├── controllers/             # Business logic
+│   ├── controllers/
 │   │   ├── authController.js
-│   │   ├── teamController.js
+│   │   ├── orgController.js
 │   │   ├── projectController.js
-│   │   └── taskController.js
+│   │   ├── taskController.js
+│   │   ├── commentController.js
+│   │   └── inviteController.js
 │   │
-│   ├── services/                # Service layer for DB operations
+│   ├── services/
 │   │   ├── authService.js
-│   │   ├── teamService.js
+│   │   ├── orgService.js
 │   │   ├── projectService.js
-│   │   └── taskService.js
+│   │   ├── taskService.js
+│   │   ├── commentService.js
+│   │   └── inviteService.js
 │   │
 │   ├── middlewares/
-│   │   ├── authMiddleware.js    # JWT verification
-│   │   ├── roleMiddleware.js    # RBAC
-│   │   ├── errorMiddleware.js   # Global error handler
-│   │   └── rateLimiter.js       # Optional login limit
+│   │   ├── authMiddleware.js
+│   │   ├── roleMiddleware.js
+│   │   ├── errorMiddleware.js
+│   │   └── rateLimiter.js
 │   │
 │   ├── routes/
 │   │   ├── authRoutes.js
-│   │   ├── teamRoutes.js
+│   │   ├── orgRoutes.js
 │   │   ├── projectRoutes.js
-│   │   └── taskRoutes.js
+│   │   ├── taskRoutes.js
+│   │   ├── commentRoutes.js
+│   │   └── inviteRoutes.js
 │   │
 │   ├── utils/
-│   │   ├── logger.js            # Pino setup
-│   │   └── validators.js        # Joi schemas
+│   │   ├── logger.js
+│   │   └── validators.js
 │   │
-│   ├── app.js                   # Express app setup
-│   └── server.js                # App entry point
+│   ├── app.js
+│   └── server.js
 │
 ├── .env
 ├── package.json
@@ -69,6 +80,8 @@ team-task-manager/
 ---
 
 ## 3. Database Schema (MySQL)
+
+### `users`
 
 ### `users` Table
 
@@ -84,41 +97,65 @@ team-task-manager/
 | created\_at | TIMESTAMP                       | Default CURRENT\_TIMESTAMP     |
 | updated\_at | TIMESTAMP                       | Auto update CURRENT\_TIMESTAMP |
 
+
 ---
 
-### `teams` Table
+### `organizations`
 
 | Field       | Type         | Notes                      |
 | ----------- | ------------ | -------------------------- |
 | id          | INT          | PK, AUTO\_INCREMENT        |
-| name        | VARCHAR(255) | Unique per user            |
+| name        | VARCHAR(255) | Unique                     |
 | created\_by | CHAR(36)     | FK → users(uuid)           |
 | created\_at | TIMESTAMP    | Default CURRENT\_TIMESTAMP |
 | updated\_at | TIMESTAMP    | Auto update                |
 
 ---
 
-### `projects` Table
+### `organization_members`
+
+| Field      | Type                                      | Notes                      |
+| ---------- | ----------------------------------------- | -------------------------- |
+| id         | INT                                       | PK                         |
+| org\_id    | INT                                       | FK → organizations(id)     |
+| user\_id   | CHAR(36)                                  | FK → users(uuid)           |
+| role       | ENUM('owner','admin','member','readonly') | Default member             |
+| joined\_at | TIMESTAMP                                 | Default CURRENT\_TIMESTAMP |
+
+---
+
+### `projects`
 
 | Field       | Type         | Notes                      |
 | ----------- | ------------ | -------------------------- |
 | id          | INT          | PK, AUTO\_INCREMENT        |
-| team\_id    | INT          | FK → teams(id)             |
-| name        | VARCHAR(255) | Unique per team            |
+| org\_id     | INT          | FK → organizations(id)     |
+| name        | VARCHAR(255) | Unique per org             |
 | description | TEXT         | Optional                   |
 | created\_at | TIMESTAMP    | Default CURRENT\_TIMESTAMP |
 | updated\_at | TIMESTAMP    | Auto update                |
 
 ---
 
-### `tasks` Table
+### `project_members`
+
+| Field       | Type                                   | Notes               |
+| ----------- | -------------------------------------- | ------------------- |
+| id          | INT                                    | PK                  |
+| project\_id | INT                                    | FK → projects(id)   |
+| user\_id    | CHAR(36)                               | FK → users(uuid)    |
+| role        | ENUM('manager','contributor','viewer') | Default contributor |
+
+---
+
+### `tasks`
 
 | Field         | Type                                 | Notes                      |
 | ------------- | ------------------------------------ | -------------------------- |
 | id            | INT                                  | PK, AUTO\_INCREMENT        |
 | project\_id   | INT                                  | FK → projects(id)          |
 | assigned\_to  | CHAR(36)                             | FK → users(uuid), nullable |
-| title         | VARCHAR(255)                         | Must be unique per project |
+| title         | VARCHAR(255)                         | Unique per project         |
 | description   | TEXT                                 | Optional                   |
 | status        | ENUM('pending','in-progress','done') | Default 'pending'          |
 | priority      | ENUM('low','medium','high')          | Default 'medium'           |
@@ -126,6 +163,43 @@ team-task-manager/
 | created\_at   | TIMESTAMP                            | Default CURRENT\_TIMESTAMP |
 | updated\_at   | TIMESTAMP                            | Auto update                |
 | completed\_at | DATETIME                             | Nullable                   |
+
+---
+
+### `task_comments`
+
+| Field       | Type      | Notes                      |
+| ----------- | --------- | -------------------------- |
+| id          | INT       | PK                         |
+| task\_id    | INT       | FK → tasks(id)             |
+| user\_id    | CHAR(36)  | FK → users(uuid)           |
+| content     | TEXT      | Supports `@mentions`       |
+| created\_at | TIMESTAMP | Default CURRENT\_TIMESTAMP |
+
+---
+
+### `task_mentions`
+
+| Field         | Type     | Notes                   |
+| ------------- | -------- | ----------------------- |
+| id            | INT      | PK                      |
+| comment\_id   | INT      | FK → task\_comments(id) |
+| mentioned\_id | CHAR(36) | FK → users(uuid)        |
+
+---
+
+### `invites`
+
+| Field       | Type                                 | Notes                      |
+| ----------- | ------------------------------------ | -------------------------- |
+| id          | INT                                  | PK                         |
+| email       | VARCHAR(255)                         | User being invited         |
+| org\_id     | INT                                  | FK → organizations(id)     |
+| invited\_by | CHAR(36)                             | FK → users(uuid)           |
+| token       | VARCHAR(255)                         | Random string              |
+| status      | ENUM('pending','accepted','expired') |                            |
+| created\_at | TIMESTAMP                            | Default CURRENT\_TIMESTAMP |
+| expires\_at | TIMESTAMP                            |                            |
 
 ---
 
@@ -139,131 +213,88 @@ team-task-manager/
 | POST   | /auth/login   | Login with username/pass | Public |
 | POST   | /auth/refresh | Refresh JWT token        | Auth   |
 
-### Teams
+---
 
-| Method | Path        | Description       | Access     |
-| ------ | ----------- | ----------------- | ---------- |
-| POST   | /teams      | Create new team   | Admin/User |
-| GET    | /teams      | List user’s teams | Auth       |
-| GET    | /teams/\:id | Get team details  | Auth       |
-| DELETE | /teams/\:id | Delete team       | Admin only |
+### Organizations
+
+| Method | Path               | Description         | Access     |
+| ------ | ------------------ | ------------------- | ---------- |
+| POST   | /orgs              | Create new org      | Auth       |
+| GET    | /orgs              | List user’s orgs    | Auth       |
+| GET    | /orgs/\:id         | Get org details     | Org member |
+| DELETE | /orgs/\:id         | Delete org          | Org owner  |
+| POST   | /orgs/\:id/members | Add member (invite) | Org admin  |
+| GET    | /orgs/\:id/members | List org members    | Org member |
+
+---
 
 ### Projects
 
-| Method | Path                 | Description            | Access     |
-| ------ | -------------------- | ---------------------- | ---------- |
-| POST   | /teams/\:id/projects | Create project in team | Admin/User |
-| GET    | /teams/\:id/projects | List team projects     | Auth       |
-| PATCH  | /projects/\:id       | Update project         | Admin/User |
-| DELETE | /projects/\:id       | Delete project         | Admin only |
+| Method | Path                   | Description           | Access          |
+| ------ | ---------------------- | --------------------- | --------------- |
+| POST   | /orgs/\:id/projects    | Create project in org | Org member      |
+| GET    | /orgs/\:id/projects    | List org projects     | Org member      |
+| GET    | /projects/\:id         | Get project details   | Project member  |
+| PATCH  | /projects/\:id         | Update project        | Project manager |
+| DELETE | /projects/\:id         | Delete project        | Project manager |
+| POST   | /projects/\:id/members | Add user to project   | Project manager |
+| GET    | /projects/\:id/members | List project members  | Project member  |
+
+---
 
 ### Tasks
 
-| Method | Path                 | Description         | Access     |
-| ------ | -------------------- | ------------------- | ---------- |
-| POST   | /projects/\:id/tasks | Create task         | Auth       |
-| GET    | /projects/\:id/tasks | List tasks          | Auth       |
-| PATCH  | /tasks/\:id          | Update task details | Auth       |
-| PATCH  | /tasks/\:id/status   | Update task status  | Auth       |
-| DELETE | /tasks/\:id          | Delete task         | Admin/User |
+| Method | Path                 | Description         | Access           |
+| ------ | -------------------- | ------------------- | ---------------- |
+| POST   | /projects/\:id/tasks | Create task         | Project member   |
+| GET    | /projects/\:id/tasks | List tasks          | Project member   |
+| GET    | /tasks/\:id          | Get task details    | Project member   |
+| PATCH  | /tasks/\:id          | Update task details | Assignee/Manager |
+| PATCH  | /tasks/\:id/status   | Update task status  | Assignee/Manager |
+| DELETE | /tasks/\:id          | Delete task         | Project manager  |
+
+---
+
+### Comments & Mentions
+
+| Method | Path                 | Description                 | Access         |
+| ------ | -------------------- | --------------------------- | -------------- |
+| POST   | /tasks/\:id/comments | Add comment (with mentions) | Project member |
+| GET    | /tasks/\:id/comments | List task comments          | Project member |
+
+---
+
+### Invitations
+
+| Method | Path                    | Description           | Access    |
+| ------ | ----------------------- | --------------------- | --------- |
+| POST   | /orgs/\:id/invites      | Send invite to email  | Org admin |
+| GET    | /invites/\:token        | Validate invite token | Public    |
+| POST   | /invites/\:token/accept | Accept invite         | Public    |
 
 ---
 
 ## 5. Recommended Implementation Order
 
-1. **Project Setup**
-
-   * Initialize Node.js project
-   * Setup `.env`
-   * Install dependencies: express, mysql2, bcrypt, joi, pino, jsonwebtoken, dotenv, cors, helmet
-
-2. **Database Setup**
-
-   * Design schema in MySQL
-   * Test DB connection (`db.js`)
-
-3. **Logging**
-
-   * Setup Pino global logger
-   * Create `logger.js` in utils
-
-4. **Auth**
-
-   * Signup/Login endpoints
-   * JWT authentication
-   * Role middleware (`roleMiddleware.js`)
-
-5. **Teams**
-
-   * CRUD APIs for teams
-   * Assign creator as admin
-   * Logging team creation
-
-6. **Projects**
-
-   * CRUD APIs for projects within a team
-   * Validation + logging
-
-7. **Tasks**
-
-   * CRUD APIs for tasks
-   * Assign tasks to team members
-   * Status updates, priority, due date
-   * Filtering and sorting
-
-8. **Activity Logs**
-
-   * Middleware or service to record actions
-   * Admin endpoint to view logs
-
-9. **Real-time Notifications (optional)**
-
-   * Setup `socket.io`
-   * Notify team members when tasks are assigned or updated
-
-10. **Production Readiness**
-
-    * Error handling middleware
-    * Security middleware: helmet, cors, rate limiting
-    * Swagger docs
-    * Dockerize app + DB
-
-11. **Testing**
-
-    * Write unit tests for services
-    * Integration tests for routes
+1. **Already done:** Auth + `users` table.
+2. **Organizations**: orgs + org\_members + RBAC.
+3. **Projects**: CRUD + project\_members.
+4. **Tasks**: CRUD, assign users.
+5. **Comments & Mentions**: build task\_comments + task\_mentions.
+6. **Invitations**: invite system (generate token, store, later email).
+7. **Notifications**: Redis pub/sub + WebSocket for task events.
+8. **Activity Logs**: record all actions (optional).
+9. **Polish for Production**: error handling, rate limiting, Swagger docs, Docker.
+10. **Testing**: unit + integration tests.
 
 ---
 
-## 6. Recommended Technologies & Packages
+## 6. Notes
 
-| Purpose               | Package(s)                |
-| --------------------- | ------------------------- |
-| Express Server        | express                   |
-| MySQL Connection      | mysql2                    |
-| Validation            | joi                       |
-| Authentication        | jsonwebtoken              |
-| Password Hashing      | bcrypt                    |
-| Logging               | pino, pino-pretty         |
-| Environment Variables | dotenv                    |
-| Security              | helmet, cors              |
-| Rate Limiting         | express-rate-limit, redis |
-| Testing               | jest, supertest           |
-| Dockerization         | docker, docker-compose    |
+* Keep sensitive fields (passwords, tokens) out of responses.
+* Use **services** for DB ops, **controllers** for request handling.
+* Enforce **RBAC** at both org and project levels.
+* Use transactions for multi-table ops (e.g., invite + member creation).
+* Logging: verbose in dev, concise in prod.
 
 ---
-
-## 7. Notes
-
-* Use **services** for DB operations and **controllers** for request handling.
-* Always **remove sensitive fields** (password, tokens) before sending JSON responses.
-* Keep **logging verbose in dev** and concise in production.
-* Enforce **RBAC** consistently using `roleMiddleware`.
-* Use **transactions** for critical operations involving multiple tables.
-
-<<<<<<< HEAD
-=======
-
->>>>>>> 0bcda5d (commit 2)
-
-
