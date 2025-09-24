@@ -1,19 +1,33 @@
 const logger = require("../utils/logger");
+const db = require("../config/db");
 
+// Usage: authorizedRoles('owner', 'admin')
 function authorizedRoles(...allowedRoles) {
-  return (req, res, next) => {
-    const user = req.user;
-    if (!user) {
-      return res.status(401).json({ success: false, message: "Unauthorized" });
-    }
-    if (!allowedRoles.includes(user.role)) {
-      logger.warn(
-        { username: user.username, role: user.role },
-        "Access denied"
+  return async (req, res, next) => {
+    try {
+      const orgId = req.params.id; // assume orgId comes from route params
+      const [rows] = await db.execute(
+        "SELECT role FROM organization_members WHERE user_id = ? AND org_id = ?",
+        [req.user.uuid, orgId]
       );
-      return res.status(403).json({ success: false, message: "Forbidden" });
+      if (rows.length === 0) {
+        return res
+          .status(401)
+          .json({ success: false, message: "Unauthorized" });
+      }
+
+      const userRole = rows[0].role;
+
+      if (!allowedRoles.includes(userRole)) {
+        logger.warn({ userId: req.user.uuid, role: userRole }, "Access denied");
+        return res.status(403).json({ success: false, message: "Forbidden" });
+      }
+
+      next();
+    } catch (error) {
+      logger.error(error, "Error checking authorization");
+      return res.status(500).json({ success: false, message: "Server error" });
     }
-    next();
   };
 }
 

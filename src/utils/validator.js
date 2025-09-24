@@ -18,7 +18,7 @@ const signupSchema = Joi.object({
       "date.min": "Date must be after 1900-01-01",
       "any.required": "Birthdate is required",
     }),
-  role: Joi.string().valid("user", "admin").default("user"), //"readonly" is can only assigned by admin to a user
+  role: Joi.string().valid("user", "admin").default("admin"), //"readonly" is can only assigned by admin to a user
 }).unknown(false);
 
 // login
@@ -27,7 +27,13 @@ const loginSchema = Joi.object({
   password: Joi.string().required(),
 }).unknown(false);
 
+// org creation
+const orgCreationSchema = Joi.object({
+  org_name: Joi.string().alphanum().max(20).min(4).required(),
+}).unknown(false);
+
 module.exports = {
   signupSchema,
   loginSchema,
+  orgCreationSchema,
 };
