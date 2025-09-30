@@ -133,64 +133,72 @@ team-task-manager/
 
 ## 4. API Endpoints & Suggested Order
 
-### **1. Users**
+---
 
-| Method | Path         | Description       | Access |
-| ------ | ------------ | ----------------- | ------ |
-| POST   | /auth/signup | Register new user | Public |
-| POST   | /auth/login  | Login             | Public |
+## **1. Users (Auth)**
+
+| Method | Path          | Description              | Access |
+| ------ | ------------- | ------------------------ | ------ |
+| POST   | /auth/signup  | Register new user        | Public |
+| POST   | /auth/login   | Login with username/pass | Public |
+| POST   | /auth/refresh | Refresh JWT token        | Auth   |
 
 ---
 
-### **2. Organizations**
+## **2. Organizations**
 
-| Method | Path      | Description                                  | Access             |
-| ------ | --------- | -------------------------------------------- | ------------------ |
-| POST   | /orgs     | Create org                                   | Auth               |
-| GET    | /orgs     | List user’s orgs                             | Auth               |
-| GET    | /orgs/:id | Org details (members + projects + user role) | Auth (only member) |
-
----
-
-### **3. Organization Members**
-
-| Method | Path                         | Description     | Access      |
-| ------ | ---------------------------- | --------------- | ----------- |
-| POST   | /orgs/:orgId/members         | Add user to org | Owner/Admin |
-| DELETE | /orgs/:orgId/members/:userId | Remove user     | Owner/Admin |
+| Method | Path         | Description                                            | Access                |
+| ------ | ------------ | ------------------------------------------------------ | --------------------- |
+| POST   | /orgs        | Create a new organization                              | Auth                  |
+| GET    | /orgs        | List all organizations the user is a member of         | Auth                  |
+| GET    | /orgs/:orgId | Get organization details, including members + projects | Auth (only if member) |
+| PATCH  | /orgs/:orgId | Update organization info (name, etc.)                  | Owner/Admin           |
+| DELETE | /orgs/:orgId | Delete organization                                    | Owner/Admin           |
 
 ---
 
-### **4. Projects**
+## **3. Organization Members**
 
-| Method | Path                  | Description           | Access          |
-| ------ | --------------------- | --------------------- | --------------- |
-| POST   | /orgs/:orgId/projects | Create project in org | Owner/Admin     |
-| GET    | /orgs/:orgId/projects | List projects in org  | Org members     |
-| GET    | /projects/:id         | Project details       | Project members |
-| PATCH  | /projects/:id         | Update project        | Project Admins  |
-| DELETE | /projects/:id         | Delete project        | Project Admins  |
+| Method | Path                         | Description             | Access      |
+| ------ | ---------------------------- | ----------------------- | ----------- |
+| POST   | /orgs/:orgId/members         | Add a user to an org    | Owner/Admin |
+| DELETE | /orgs/:orgId/members/:userId | Remove a user from org  | Owner/Admin |
+| GET    | /orgs/:orgId/members         | List all members of org | Auth        |
 
 ---
 
-### **5. Project Members**
+## **4. Projects**
 
-| Method | Path                                 | Description         | Access        |
-| ------ | ------------------------------------ | ------------------- | ------------- |
-| POST   | /projects/:projectId/members         | Add user to project | Project Admin |
-| DELETE | /projects/:projectId/members/:userId | Remove user         | Project Admin |
+| Method | Path                  | Description                         | Access          |
+| ------ | --------------------- | ----------------------------------- | --------------- |
+| POST   | /orgs/:orgId/projects | Create a project in an organization | Owner/Admin     |
+| GET    | /orgs/:orgId/projects | List all projects in an org         | Org members     |
+| GET    | /projects/:projectId  | Get project details                 | Project members |
+| PATCH  | /projects/:projectId  | Update project info                 | Project Admin   |
+| DELETE | /projects/:projectId  | Delete a project                    | Project Admin   |
 
 ---
 
-### **6. Tasks**
+## **5. Project Members**
 
-| Method | Path                       | Description         | Access                        |
-| ------ | -------------------------- | ------------------- | ----------------------------- |
-| POST   | /projects/:projectId/tasks | Create task         | Project member                |
-| GET    | /projects/:projectId/tasks | List tasks          | Project member                |
-| PATCH  | /tasks/:id                 | Update task details | Project member                |
-| PATCH  | /tasks/:id/status          | Update task status  | Assigned user / Project Admin |
-| DELETE | /tasks/:id                 | Delete task         | Assigned user / Project Admin |
+| Method | Path                                 | Description              | Access          |
+| ------ | ------------------------------------ | ------------------------ | --------------- |
+| POST   | /projects/:projectId/members         | Add a user to project    | Project Admin   |
+| DELETE | /projects/:projectId/members/:userId | Remove user from project | Project Admin   |
+| GET    | /projects/:projectId/members         | List all members         | Project members |
+
+---
+
+## **6. Tasks**
+
+| Method | Path                       | Description             | Access                        |
+| ------ | -------------------------- | ----------------------- | ----------------------------- |
+| POST   | /projects/:projectId/tasks | Create a task           | Project members               |
+| GET    | /projects/:projectId/tasks | List tasks in a project | Project members               |
+| GET    | /tasks/:taskId             | Get task details        | Assigned user/Project members |
+| PATCH  | /tasks/:taskId             | Update task details     | Assigned user/Project members |
+| PATCH  | /tasks/:taskId/status      | Update task status      | Assigned user/Project members |
+| DELETE | /tasks/:taskId             | Delete a task           | Assigned user/Project Admin   |
 
 ---
 
