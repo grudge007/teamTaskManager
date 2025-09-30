@@ -57,7 +57,7 @@ exports.userLogin = async (username, password) => {
     const accessToken = jwt.sign(
       { uuid: user.uuid, username: user.username, role: user.role },
       secretKey,
-      { expiresIn: "15m" }
+      { expiresIn: "15d" }
     );
     const refreshToken = jwt.sign(
       { uuid: user.uuid, username: user.username, role: user.role },

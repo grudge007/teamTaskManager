@@ -1,6 +1,7 @@
 const { SCHEMA_TEXT_FIELD_PHONETIC } = require("redis");
 const db = require("../config/db");
 const logger = require("../utils/logger");
+const { SELECT } = require("sequelize/lib/query-types");
 
 // create org
 exports.createOrg = async (org_name, user_uuid) => {
@@ -64,41 +65,42 @@ exports.listOrg = async (user_uuid) => {
 // list org details
 exports.listOrgDetails = async (user_uuid, org_id) => {
   try {
-    console.log(`uuid = ${user_uuid}, orgid = ${org_id}`);
-    const [results] = await db.query(
-      "SELECT * FROM organizations WHERE id = ? AND created_by = ?",
+    // 1️⃣ Check membership
+    const [memberRows] = await db.query(
+      "SELECT role FROM organization_members WHERE org_id = ? AND user_id = ?",
       [org_id, user_uuid]
     );
-    if (!results || results.length === 0) {
-      throw new Error("Organization not found or access denied");
-    }
-    const orgDetails = results[0];
 
-    logger.info(
-      "Organization details fetched for org %s by user %s",
-      org_id,
-      user_uuid
+    if (memberRows.length === 0) {
+      throw Object.assign(
+        new Error("Organization not found or access denied"),
+        { status: 403 }
+      );
+    }
+    const userRole = memberRows[0].role;
+
+    // 2️⃣ Fetch organization details
+    const [orgRows] = await db.query(
+      "SELECT id, name, created_by, created_at, updated_at FROM organizations WHERE id = ?",
+      [org_id]
     );
 
-    return {
-      success: true,
-      data: orgDetails,
-      message: "Organization details fetched successfully",
-    };
+    if (orgRows.length === 0) {
+      throw Object.assign(new Error("Organization not found"), { status: 404 });
+    }
+
+    const org = orgRows[0]; // first row
+    org.user_role = userRole; // add the member’s role
+
+    return org; // service returns raw data
   } catch (err) {
     logger.error(
-      "Error fetching organization details for org %s by user %s: %s",
+      "Error fetching org %s for user %s: %s",
       org_id,
       user_uuid,
       err.message
     );
-
-    // Re-throw with proper context
-    const error = new Error(
-      `Failed to fetch organization details: ${err.message}`
-    );
-    error.status = err.status || 500;
-    error.originalError = err;
-    throw error;
+    throw err;
   }
 };
+
